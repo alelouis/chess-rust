@@ -1,5 +1,6 @@
 mod app;
 mod board;
+mod piece;
 
 extern crate glutin_window;
 extern crate graphics;

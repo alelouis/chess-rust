@@ -17,7 +17,7 @@ impl Square {
         Square { color , index }
     }
     pub fn index_to_file_rank(self: &Self) -> (u8, u8) {
-        (self.index / 8, self.index % 8)
+        (self.index / 8, 7 - self.index % 8)
     }
 }
 
@@ -33,4 +33,8 @@ impl Board {
         }
         Board { squares }
     }
+    pub fn get_square_at_file_rank(&self, file: u8, rank:u8) -> &Square {
+        &self.squares[(rank + file * 8) as usize]
+    }
+
 }
