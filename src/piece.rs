@@ -1,7 +1,7 @@
 use crate::board::Square;
 
 pub struct Piece<'a> {
-    pub position: &'a Square
+    pub position: &'a Square,
 }
 
 impl Piece<'_> {
