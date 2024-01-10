@@ -1,8 +1,11 @@
-use crate::board::Board;
-use crate::piece::Piece;
+use crate::board::{Board, Square};
+use crate::piece::{Kind, Piece};
+use glutin_window::GlutinWindow as Window;
 use graphics::{clear, polygon, rectangle, Transformed};
-use opengl_graphics::{GlGraphics, OpenGL};
+use opengl_graphics::{GlGraphics, OpenGL, Texture};
 use piston::input::{RenderArgs, RenderEvent, UpdateArgs, UpdateEvent};
+use sprite::Scene;
+use uuid::Uuid;
 
 pub struct App {
     pub gl: GlGraphics,
@@ -12,23 +15,28 @@ pub struct App {
     pub x: f32,
     pub y: f32,
     pub pressed: bool,
+    pub active_piece: Option<Uuid>,
+}
+
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
 }
 
 impl App {
     pub fn render(&mut self, args: &RenderArgs) {
-        let board = Board::new();
-        let piece = Piece::new(board.get_square_at_file_rank(0, 0));
-        self.render_board(&board, args);
-        self.render_piece(&piece, args);
+        let mut scene = Scene::new();
+        let mut piece = Piece::new(Kind::Pawn, &mut scene, 0);
+        self.render_board(args);
+        self.render_pieces(&scene, &mut piece, args);
     }
 
-    pub fn render_board(&mut self, board: &Board, args: &RenderArgs) {
+    pub fn render_board(&mut self, args: &RenderArgs) {
         self.gl.draw(args.viewport(), |c, gl| {
             // Clear the screen
             clear([0.0, 1.0, 0.0, 1.0], gl);
 
             let square_size = self.height as f32 / 8.0;
-            for s in board.squares.iter() {
+            for s in self.board.squares.iter() {
                 let (rank, file) = s.index_to_file_rank();
                 let (x, y) = (file as f32 * square_size, rank as f32 * square_size);
                 let transform = c.transform.trans(x.into(), y.into());
@@ -42,39 +50,36 @@ impl App {
         });
     }
 
-    pub fn render_piece(&mut self, piece: &Piece, args: &RenderArgs) {
+    pub fn render_pieces<'a>(
+        &mut self,
+        scene: &Scene<Texture>,
+        piece: &mut Piece,
+        args: &RenderArgs,
+    ) {
         let square_size = self.height as f32 / 8.0;
         let (mut x, mut y) = (0.0, 0.0);
         self.gl.draw(args.viewport(), |c, gl| {
-            let black = [0.0, 0.0, 0.0, 1.0];
-            let green = [0.0, 1.0, 0.0, 1.0];
-            let (file, rank) = piece.position.index_to_file_rank();
-            // let (x, y) = (file as f32 * square_size, rank as f32 * square_size);
             if self.pressed {
                 (x, y) = (self.x, self.y);
             } else {
-                (x, y) = (
-                    (self.x / square_size).floor() * square_size + square_size / 2.0,
-                    (self.y / square_size).floor() * square_size + square_size / 2.0,
-                );
+                let (next_file, next_rank) = Square::xy_to_file_rank(self.x, self.y, square_size);
+                let index = Square::file_rank_to_index(next_file, next_rank) as usize;
+                self.board.squares[index].piece = Some(piece.id);
+                (x, y) = Square::file_rank_to_xy(next_file, next_file, square_size);
             }
             let transform = c.transform.trans((x).into(), (y).into());
-            let color = if self.pressed { green } else { black };
-            polygon(
-                color,
-                &[
-                    [0.0, (-square_size / 2.0).into()],
-                    [(square_size / 2.0).into(), 0.0],
-                    [0.0, (square_size / 2.0).into()],
-                    [(-square_size / 2.0).into(), 0.0],
-                ],
-                transform,
-                gl,
-            );
+            scene.draw(transform, gl);
         });
     }
 
     pub fn update(&mut self, args: &UpdateArgs) {
-        // Rotate 2 radians per second.
+        let square_size = self.height as f32 / 8.0;
+
+        if self.pressed {
+            let (file, rank) = Square::xy_to_file_rank(self.x, self.y, square_size);
+            let index_clicked = Square::file_rank_to_index(file, rank) as usize;
+            let id_clicked = self.board.squares[index_clicked].piece;
+            println!("{:?}", id_clicked);
+        }
     }
 }

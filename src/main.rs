@@ -2,10 +2,12 @@ mod app;
 mod board;
 mod piece;
 
+extern crate find_folder;
 extern crate glutin_window;
 extern crate graphics;
 extern crate opengl_graphics;
 extern crate piston;
+extern crate sprite;
 
 use crate::board::Board;
 use app::App;
@@ -21,14 +23,13 @@ fn main() {
     let opengl = OpenGL::V3_2;
 
     // Create a Glutin window.
-    let height = 512;
-    let width = 512;
+    let height = 768;
+    let width = 768;
     let mut window: Window = WindowSettings::new("chess", [height, width])
         .graphics_api(opengl)
         .exit_on_esc(true)
         .build()
         .unwrap();
-    let mut cursor = [0.0, 0.0];
 
     let mut game = App {
         gl: GlGraphics::new(opengl),
@@ -38,6 +39,7 @@ fn main() {
         x: 0.0,
         y: 0.0,
         pressed: false,
+        active_piece: None,
     };
 
     let mut events = Events::new(EventSettings::new());
