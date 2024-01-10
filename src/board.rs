@@ -23,14 +23,14 @@ impl Square {
             piece: None,
         }
     }
-    pub fn index_to_file_rank(self: &Self) -> (u8, u8) {
-        (self.index / 8, 7 - self.index % 8)
+    pub fn file_rank(self: &Self) -> (u8, u8) {
+        (self.index / 8, self.index % 8)
     }
     pub fn xy_to_file_rank(x: f32, y: f32, square_size: f32) -> (u8, u8) {
         let square_size = square_size as f32;
         (
             (x / square_size).floor() as u8,
-            7 - (y / square_size).floor() as u8,
+            (y / square_size).floor() as u8,
         )
     }
     pub fn file_rank_to_index(file: u8, rank: u8) -> u8 {
@@ -39,8 +39,8 @@ impl Square {
 
     pub fn file_rank_to_xy(file: u8, rank: u8, square_size: f32) -> (f32, f32) {
         (
-            file as f32 * square_size + square_size / 2.0,
             rank as f32 * square_size + square_size / 2.0,
+            file as f32 * square_size + square_size / 2.0,
         )
     }
 }

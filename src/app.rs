@@ -10,12 +10,16 @@ use uuid::Uuid;
 pub struct App {
     pub gl: GlGraphics,
     pub board: Board,
+    pub pieces: Vec<Piece>,
+    pub scene: Scene<Texture>,
     pub width: u32,
     pub height: u32,
     pub x: f32,
     pub y: f32,
     pub pressed: bool,
-    pub active_piece: Option<Uuid>,
+    pub click: bool,
+    pub release: bool,
+    pub active_piece: Option<u8>,
 }
 
 fn print_type_of<T>(_: &T) {
@@ -23,21 +27,25 @@ fn print_type_of<T>(_: &T) {
 }
 
 impl App {
+    pub fn init(&mut self) {
+        self.pieces.push(Piece::new(Kind::Pawn, &mut self.scene, 0));
+        self.board.squares[0].piece = Some(self.pieces[0].id);
+
+        self.pieces.push(Piece::new(Kind::Pawn, &mut self.scene, 1));
+        self.board.squares[1].piece = Some(self.pieces[1].id);
+    }
+
     pub fn render(&mut self, args: &RenderArgs) {
-        let mut scene = Scene::new();
-        let mut piece = Piece::new(Kind::Pawn, &mut scene, 0);
         self.render_board(args);
-        self.render_pieces(&scene, &mut piece, args);
+        self.render_pieces(args);
     }
 
     pub fn render_board(&mut self, args: &RenderArgs) {
         self.gl.draw(args.viewport(), |c, gl| {
-            // Clear the screen
             clear([0.0, 1.0, 0.0, 1.0], gl);
-
             let square_size = self.height as f32 / 8.0;
             for s in self.board.squares.iter() {
-                let (rank, file) = s.index_to_file_rank();
+                let (rank, file) = s.file_rank();
                 let (x, y) = (file as f32 * square_size, rank as f32 * square_size);
                 let transform = c.transform.trans(x.into(), y.into());
                 rectangle(
@@ -50,36 +58,67 @@ impl App {
         });
     }
 
-    pub fn render_pieces<'a>(
-        &mut self,
-        scene: &Scene<Texture>,
-        piece: &mut Piece,
-        args: &RenderArgs,
-    ) {
+    pub fn render_pieces(&mut self, args: &RenderArgs) {
         let square_size = self.height as f32 / 8.0;
-        let (mut x, mut y) = (0.0, 0.0);
         self.gl.draw(args.viewport(), |c, gl| {
-            if self.pressed {
-                (x, y) = (self.x, self.y);
+            if let Some(active_piece_id) = self.active_piece {
+                let mut active_piece_sprite_id = None;
+                for p in self.pieces.iter() {
+                    if p.id == active_piece_id {
+                        active_piece_sprite_id = Some(p.sprite_id);
+                    }
+                }
+                let child = self
+                    .scene
+                    .child_mut(active_piece_sprite_id.expect("No sprite id."))
+                    .expect("No child for specified uuid.");
+                child.set_position(self.x.into(), self.y.into());
             } else {
-                let (next_file, next_rank) = Square::xy_to_file_rank(self.x, self.y, square_size);
-                let index = Square::file_rank_to_index(next_file, next_rank) as usize;
-                self.board.squares[index].piece = Some(piece.id);
-                (x, y) = Square::file_rank_to_xy(next_file, next_file, square_size);
-            }
-            let transform = c.transform.trans((x).into(), (y).into());
-            scene.draw(transform, gl);
+                for square in self.board.squares.iter() {
+                    if let Some(piece_id) = square.piece {
+                        let mut active_piece_sprite_id = None;
+                        for p in self.pieces.iter() {
+                            if p.id == piece_id {
+                                active_piece_sprite_id = Some(p.sprite_id);
+                                let child = self
+                                    .scene
+                                    .child_mut(active_piece_sprite_id.expect("No sprite id."))
+                                    .expect("No child for specified uuid.");
+                                let (file, rank) = square.file_rank();
+                                let (x, y) = Square::file_rank_to_xy(file, rank, square_size);
+                                child.set_position(x.into(), y.into());
+                            }
+                        }
+                    }
+                }
+            };
+
+            self.scene.draw(c.transform, gl);
         });
     }
 
     pub fn update(&mut self, args: &UpdateArgs) {
         let square_size = self.height as f32 / 8.0;
 
-        if self.pressed {
+        if self.click {
             let (file, rank) = Square::xy_to_file_rank(self.x, self.y, square_size);
             let index_clicked = Square::file_rank_to_index(file, rank) as usize;
             let id_clicked = self.board.squares[index_clicked].piece;
-            println!("{:?}", id_clicked);
+
+            if let Some(some_id_clicked) = id_clicked {
+                self.active_piece = Some(some_id_clicked);
+                self.board.squares[index_clicked].piece = None;
+            }
+            self.click = false;
+        }
+        if self.release {
+            if self.active_piece.is_some() {
+                let (file, rank) = Square::xy_to_file_rank(self.x, self.y, square_size);
+                let index_released = Square::file_rank_to_index(file, rank) as usize;
+                self.board.squares[index_released].piece = self.active_piece;
+            }
+            self.active_piece = None;
+            self.release = false;
         }
     }
 }
