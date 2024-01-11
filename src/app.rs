@@ -28,11 +28,29 @@ fn print_type_of<T>(_: &T) {
 
 impl App {
     pub fn init(&mut self) {
-        self.pieces.push(Piece::new(Kind::Pawn, &mut self.scene, 0));
-        self.board.squares[0].piece = Some(self.pieces[0].id);
-
-        self.pieces.push(Piece::new(Kind::Pawn, &mut self.scene, 1));
-        self.board.squares[1].piece = Some(self.pieces[1].id);
+        let pieces_kinds = vec![
+            Kind::Rook,
+            Kind::Knight,
+            Kind::Bishop,
+            Kind::Queen,
+            Kind::King,
+            Kind::Bishop,
+            Kind::Knight,
+            Kind::Rook,
+            Kind::Pawn,
+            Kind::Pawn,
+            Kind::Pawn,
+            Kind::Pawn,
+            Kind::Pawn,
+            Kind::Pawn,
+            Kind::Pawn,
+            Kind::Pawn,
+        ];
+        for idx in 0..pieces_kinds.len() {
+            self.pieces
+                .push(Piece::new(pieces_kinds[idx], &mut self.scene, idx as u8));
+            self.board.squares[idx].piece = Some(self.pieces[idx].id);
+        }
     }
 
     pub fn render(&mut self, args: &RenderArgs) {
