@@ -1,0 +1,8 @@
+[render]
+piece_scale = 0.085
+font_scale = 0.3
+window_size = 786
+global_scale = 1
+
+[engine]
+fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"

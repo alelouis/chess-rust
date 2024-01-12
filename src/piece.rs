@@ -1,5 +1,4 @@
-use crate::board::Square;
-use glutin_window::GlutinWindow as Window;
+use crate::piece::Color::{Black, White};
 use opengl_graphics::{Texture, TextureSettings};
 use piston_window::*;
 use sprite::*;
@@ -7,25 +6,19 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use uuid::Uuid;
 
-fn get_set() -> HashMap<Kind, String> {
-    let mut set = HashMap::new();
-    set.insert(Kind::Pawn, String::from("bP.png"));
-    set.insert(Kind::Bishop, String::from("bB.png"));
-    set.insert(Kind::Knight, String::from("bN.png"));
-    set.insert(Kind::King, String::from("bK.png"));
-    set.insert(Kind::Queen, String::from("bQ.png"));
-    set.insert(Kind::Rook, String::from("bR.png"));
-    set
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
+pub enum Color {
+    White,
+    Black,
 }
-
-#[derive(Eq, PartialEq, Hash, Copy, Clone)]
+#[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 pub enum Kind {
-    Pawn,
-    Bishop,
-    Knight,
-    Rook,
-    Queen,
-    King,
+    Pawn(Color),
+    Bishop(Color),
+    Knight(Color),
+    Rook(Color),
+    Queen(Color),
+    King(Color),
 }
 
 pub struct Piece {
@@ -34,14 +27,29 @@ pub struct Piece {
     pub id: u8,
 }
 
+fn get_set() -> HashMap<Kind, String> {
+    let mut set = HashMap::new();
+    set.insert(Kind::Pawn(White), String::from("wP.png"));
+    set.insert(Kind::Bishop(White), String::from("wB.png"));
+    set.insert(Kind::Knight(White), String::from("wN.png"));
+    set.insert(Kind::King(White), String::from("wK.png"));
+    set.insert(Kind::Queen(White), String::from("wQ.png"));
+    set.insert(Kind::Rook(White), String::from("wR.png"));
+    set.insert(Kind::Pawn(Black), String::from("bP.png"));
+    set.insert(Kind::Bishop(Black), String::from("bB.png"));
+    set.insert(Kind::Knight(Black), String::from("bN.png"));
+    set.insert(Kind::King(Black), String::from("bK.png"));
+    set.insert(Kind::Queen(Black), String::from("bQ.png"));
+    set.insert(Kind::Rook(Black), String::from("bR.png"));
+    set
+}
+
 impl Piece {
     pub fn new(kind: Kind, scene: &mut Scene<Texture>, id: u8) -> Piece {
         let set = get_set();
-
-        let assets = find_folder::Search::ParentsThenKids(3, 3)
+        let assets = find_folder::Search::ParentsThenKids(1, 1)
             .for_folder("assets")
             .unwrap();
-
         let s = set.get(&kind).unwrap();
         let tex = Rc::new(
             Texture::from_path(
@@ -51,8 +59,6 @@ impl Piece {
             .unwrap(),
         );
         let mut sprite = Sprite::from_texture(tex);
-        sprite.set_position(0.0, 0.0);
-        sprite.set_scale(0.09, 0.09);
         let sprite_id = scene.add_child(sprite);
 
         Piece {
