@@ -1,4 +1,5 @@
 use crate::piece::Color::{Black, White};
+use ai_behavior::Action;
 use opengl_graphics::{Texture, TextureSettings};
 use piston_window::*;
 use sprite::*;
@@ -59,6 +60,7 @@ impl Piece {
             .unwrap(),
         );
         let mut sprite = Sprite::from_texture(tex);
+        sprite.set_scale(0.0, 0.0);
         let sprite_id = scene.add_child(sprite);
 
         Piece {

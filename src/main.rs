@@ -1,5 +1,5 @@
-mod app;
 mod board;
+mod chess;
 mod fonts;
 mod piece;
 
@@ -12,7 +12,7 @@ extern crate piston;
 extern crate sprite;
 
 use crate::board::Board;
-use app::App;
+use chess::Chess;
 use config::Config;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
@@ -60,7 +60,7 @@ fn main() {
     let face = freetype.new_face(&font, 0).unwrap();
     face.set_pixel_sizes(0, 100).unwrap();
 
-    let mut game = App {
+    let mut game = Chess {
         config,
         global_scale,
         gl: GlGraphics::new(opengl),
@@ -82,6 +82,8 @@ fn main() {
 
     let mut events = Events::new(EventSettings::new());
     while let Some(e) = events.next(&mut window) {
+        game.scene.event(&e);
+
         if let Some(Button::Mouse(button)) = e.press_args() {
             game.pressed = true;
             game.click = true;
