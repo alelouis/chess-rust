@@ -87,12 +87,12 @@ impl Board {
                         false => Color::Black,
                     };
                     pieces.push(match c.to_lowercase().last().unwrap() {
-                        'p' => Piece::new(Kind::Pawn(color), scene, index as u8),
-                        'n' => Piece::new(Kind::Knight(color), scene, index as u8),
-                        'b' => Piece::new(Kind::Bishop(color), scene, index as u8),
-                        'r' => Piece::new(Kind::Rook(color), scene, index as u8),
-                        'q' => Piece::new(Kind::Queen(color), scene, index as u8),
-                        'k' => Piece::new(Kind::King(color), scene, index as u8),
+                        'p' => Piece::new(Kind::Pawn, color, scene, index as u8),
+                        'n' => Piece::new(Kind::Knight, color, scene, index as u8),
+                        'b' => Piece::new(Kind::Bishop, color, scene, index as u8),
+                        'r' => Piece::new(Kind::Rook, color, scene, index as u8),
+                        'q' => Piece::new(Kind::Queen, color, scene, index as u8),
+                        'k' => Piece::new(Kind::King, color, scene, index as u8),
                         _ => {
                             panic!("Unknown letter found in FEN string: {c}")
                         }

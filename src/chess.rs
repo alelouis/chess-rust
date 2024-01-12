@@ -219,6 +219,31 @@ impl Chess {
                 if self.board.squares[index_released].piece.is_none() {
                     self.board.squares[index_released].piece = self.active_piece;
                     self.board.squares[self.last_index_clicked.unwrap()].piece = None;
+                } else {
+                    let under_piece_color = Piece::find_color_for_id(
+                        &self.pieces,
+                        self.board.squares[index_released].piece.unwrap(),
+                    )
+                    .unwrap();
+
+                    let active_piece_color =
+                        Piece::find_color_for_id(&self.pieces, self.active_piece.unwrap()).unwrap();
+                    if under_piece_color != active_piece_color {
+                        let sprite_id = Piece::find_sprite_id_for_id(
+                            &self.pieces,
+                            self.board.squares[index_released].piece.unwrap(),
+                        );
+
+                        self.scene.remove_child(sprite_id.unwrap());
+
+                        Piece::remove_id_from_pieces(
+                            &mut self.pieces,
+                            self.board.squares[index_released].piece.unwrap(),
+                        );
+
+                        self.board.squares[index_released].piece = self.active_piece;
+                        self.board.squares[self.last_index_clicked.unwrap()].piece = None;
+                    }
                 }
             }
 
