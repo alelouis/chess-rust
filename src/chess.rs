@@ -98,9 +98,9 @@ impl Chess {
             .get("render.piece_scale")
             .expect("Couldn't find piece_scale in config.");
         piece_scale = (piece_scale as f32 * self.global_scale) as f64;
+        let mut active_piece_sprite_id = None;
         self.gl.draw(args.viewport(), |c, gl| {
             if let Some(active_piece_id) = self.active_piece {
-                let mut active_piece_sprite_id = None;
                 for p in self.pieces.iter() {
                     if p.id == active_piece_id {
                         active_piece_sprite_id = Some(p.sprite_id);
@@ -164,6 +164,13 @@ impl Chess {
             };
             for child in self.scene.children() {
                 child.draw(c.transform, gl);
+            }
+            if active_piece_sprite_id.is_some() {
+                let child = self
+                    .scene
+                    .child_mut(active_piece_sprite_id.unwrap())
+                    .unwrap();
+                child.draw(c.transform, gl)
             }
         });
     }
