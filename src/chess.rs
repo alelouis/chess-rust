@@ -8,10 +8,7 @@ use graphics::math::Scalar;
 use graphics::{clear, rectangle, Transformed};
 use opengl_graphics::{GlGraphics, Texture};
 use piston::input::{RenderArgs, UpdateArgs};
-use sprite::{
-    Blink, Ease, EaseFunction, FadeIn, FadeOut, MoveBy, MoveTo, RotateBy, RotateTo, ScaleBy,
-    ScaleTo, Scene,
-};
+use sprite::{Ease, EaseFunction, MoveTo, RotateBy, RotateTo, ScaleTo, Scene};
 
 pub struct Chess {
     pub config: Config,
@@ -29,6 +26,7 @@ pub struct Chess {
     pub release: bool,
     pub active_piece: Option<u8>,
     pub face: Face,
+    pub last_index_clicked: Option<usize>,
 }
 
 impl Chess {
@@ -159,7 +157,6 @@ impl Chess {
                                         self.scene.run(active_piece_sprite_id.unwrap(), &scale);
                                     }
                                 }
-                                // child.set_position(x.into(), y.into());
                             }
                         }
                     }
@@ -177,8 +174,8 @@ impl Chess {
                 Square::xy_to_index(self.x, self.y, self.square_size, self.window_size as f32)
                     as usize;
             if let Some(id_clicked) = self.board.squares[index_clicked].piece {
+                self.last_index_clicked = Some(index_clicked);
                 self.active_piece = Some(id_clicked);
-                self.board.squares[index_clicked].piece = None;
 
                 let mut active_piece_sprite_id = None;
                 let mut piece_scale = self
@@ -212,7 +209,10 @@ impl Chess {
                 let index_released =
                     Square::xy_to_index(self.x, self.y, self.square_size, self.window_size as f32)
                         as usize;
-                self.board.squares[index_released].piece = self.active_piece;
+                if self.board.squares[index_released].piece.is_none() {
+                    self.board.squares[index_released].piece = self.active_piece;
+                    self.board.squares[self.last_index_clicked.unwrap()].piece = None;
+                }
             }
 
             self.active_piece = None;

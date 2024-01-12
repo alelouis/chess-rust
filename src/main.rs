@@ -76,6 +76,7 @@ fn main() {
         release: false,
         active_piece: None,
         face,
+        last_index_clicked: None,
     };
 
     game.init();
