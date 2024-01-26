@@ -21,6 +21,7 @@ pub enum Kind {
     King,
 }
 
+#[derive(Debug)]
 pub struct Piece {
     pub kind: Kind,
     pub sprite_id: Uuid,
@@ -98,5 +99,16 @@ impl Piece {
                 break;
             }
         }
+    }
+
+    pub fn get_piece_from_id(pieces: &Vec<Piece>, id: u8) -> Option<&Piece> {
+        let mut return_piece = None;
+        for piece in pieces.iter() {
+            if piece.id == id {
+                return_piece = Some(piece);
+                break;
+            }
+        }
+        return_piece
     }
 }

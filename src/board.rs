@@ -54,6 +54,10 @@ impl Square {
         let (file, rank) = Self::xy_to_file_rank(x, y, square_size, height);
         Self::file_rank_to_index(file, rank)
     }
+
+    pub fn index_to_file_rank(index: u8) -> (u8, u8) {
+        (index % 8, index / 8)
+    }
 }
 
 impl Board {
@@ -103,5 +107,267 @@ impl Board {
             }
         }
         pieces
+    }
+
+    pub fn generate_legal_moves(
+        &mut self,
+        pieces: &Vec<Piece>,
+        piece: &Piece,
+        file: u8,
+        rank: u8,
+    ) -> Vec<(i16, i16)> {
+        let mut legal_moves: Vec<(i16, i16)> = vec![];
+        match piece.kind {
+            Kind::Pawn => {
+                legal_moves = self.generate_pawn(pieces, piece, file, rank);
+            }
+            Kind::Bishop => {
+                let deltas = vec![(1, 1), (1, -1), (-1, -1), (-1, 1)];
+                legal_moves = self.generate_line(deltas, pieces, piece, file, rank);
+            }
+            Kind::Knight => {
+                let pos: Vec<(i16, i16)> = vec![
+                    (1, 2),
+                    (2, 1),
+                    (1, -2),
+                    (2, -1),
+                    (-1, 2),
+                    (-2, 1),
+                    (-1, -2),
+                    (-2, -1),
+                ];
+                legal_moves = self.generate_custom(pos, pieces, piece, file, rank);
+            }
+            Kind::Rook => {
+                let deltas = vec![(1, 0), (0, -1), (-1, 0), (0, 1)];
+                legal_moves = self.generate_line(deltas, pieces, piece, file, rank);
+            }
+            Kind::Queen => {
+                let deltas = vec![
+                    (1, 1),
+                    (1, -1),
+                    (-1, -1),
+                    (-1, 1),
+                    (1, 0),
+                    (0, -1),
+                    (-1, 0),
+                    (0, 1),
+                ];
+                legal_moves = self.generate_line(deltas, pieces, piece, file, rank);
+            }
+            Kind::King => {
+                let pos: Vec<(i16, i16)> = vec![
+                    (0, 1),
+                    (1, 1),
+                    (1, 0),
+                    (0, -1),
+                    (-1, -1),
+                    (-1, 0),
+                    (-1, 1),
+                    (1, -1),
+                ];
+                legal_moves = self.generate_custom(pos, pieces, piece, file, rank);
+            }
+        }
+        legal_moves
+    }
+
+    pub fn generate_pawn(
+        &mut self,
+        pieces: &Vec<Piece>,
+        piece: &Piece,
+        file: u8,
+        rank: u8,
+    ) -> Vec<(i16, i16)> {
+        let mut legal_moves: Vec<(i16, i16)> = vec![];
+
+        let color = piece.color;
+        let mut moves = vec![];
+        if color == Color::White {
+            moves.append(&mut vec![(-1, 1), (1, 1)])
+        } else {
+            moves.append(&mut vec![(-1, -1), (1, -1)])
+        }
+        let attack_moves: Vec<(i16, i16)> = moves
+            .iter()
+            .map(|(f, r)| (f + file as i16, r + rank as i16))
+            .filter(|(f, r)| Board::is_inside_board(f.clone(), r.clone()))
+            .filter(|(f, r)| {
+                Board::is_attacking(&pieces, &self.squares, piece, f.clone(), r.clone())
+            })
+            .collect();
+        legal_moves.append(&mut attack_moves.clone());
+
+        let mut moves = vec![];
+        if color == Color::White {
+            moves.append(&mut vec![(0, 1)])
+        } else {
+            moves.append(&mut vec![(0, -1)])
+        }
+
+        let mut normal_moves: Vec<(i16, i16)> = moves
+            .iter()
+            .map(|(f, r)| (f + file as i16, r + rank as i16))
+            .filter(|(f, r)| Board::is_inside_board(f.clone(), r.clone()))
+            .filter(|(f, r)| {
+                !Board::is_attacking(&pieces, &self.squares, piece, f.clone(), r.clone())
+            })
+            .filter(|(f, r)| !Board::is_allied(&pieces, &self.squares, piece, f.clone(), r.clone()))
+            .collect();
+        legal_moves.append(&mut normal_moves);
+
+        legal_moves
+    }
+
+    pub fn generate_custom(
+        &mut self,
+        custom: Vec<(i16, i16)>,
+        pieces: &Vec<Piece>,
+        piece: &Piece,
+        file: u8,
+        rank: u8,
+    ) -> Vec<(i16, i16)> {
+        let mut first = true;
+        custom
+            .iter()
+            .map(|(f, r)| (f + file as i16, r + rank as i16))
+            .filter(|(f, r)| {
+                Board::is_legal(
+                    &pieces,
+                    &self.squares,
+                    piece,
+                    &mut first,
+                    f.clone(),
+                    r.clone(),
+                    false,
+                )
+            })
+            .collect()
+    }
+
+    pub fn generate_line(
+        &mut self,
+        deltas: Vec<(i16, i16)>,
+        pieces: &Vec<Piece>,
+        piece: &Piece,
+        file: u8,
+        rank: u8,
+    ) -> Vec<(i16, i16)> {
+        let mut legal_moves: Vec<(i16, i16)> = vec![];
+        for (df, dr) in deltas {
+            let mut first = true;
+            let mut ite: Vec<(i16, i16)> = vec![(file as i16, rank as i16)]
+                .iter()
+                .cycle()
+                .enumerate()
+                .map(|(index, (f, r))| (f + (1 + index) as i16 * df, r + (1 + index) as i16 * dr))
+                .take_while(|(f, r)| {
+                    Board::is_legal(
+                        &pieces,
+                        &self.squares,
+                        piece,
+                        &mut first,
+                        f.clone(),
+                        r.clone(),
+                        true,
+                    )
+                })
+                .collect();
+            legal_moves.append(&mut ite);
+        }
+        legal_moves
+    }
+
+    fn is_inside_board(file: i16, rank: i16) -> bool {
+        (file >= 0) & (rank >= 0) & (file < 8) & (rank < 8)
+    }
+
+    fn is_allied(
+        pieces: &Vec<Piece>,
+        squares: &Vec<Square>,
+        piece: &Piece,
+        file: i16,
+        rank: i16,
+    ) -> bool {
+        let mut allied = false;
+        let index = Square::file_rank_to_index(
+            u8::try_from(file.clone()).unwrap(),
+            u8::try_from(rank.clone()).unwrap(),
+        ) as usize;
+
+        if squares[index].piece.is_some() {
+            let dest_piece =
+                Piece::get_piece_from_id(pieces, squares[index].piece.unwrap()).unwrap();
+            if dest_piece.color == piece.color {
+                allied = true;
+            } else {
+                allied = false;
+            }
+        }
+        allied
+    }
+
+    fn is_attacking(
+        pieces: &Vec<Piece>,
+        squares: &Vec<Square>,
+        piece: &Piece,
+        file: i16,
+        rank: i16,
+    ) -> bool {
+        let index = Square::file_rank_to_index(
+            u8::try_from(file.clone()).unwrap(),
+            u8::try_from(rank.clone()).unwrap(),
+        ) as usize;
+
+        let mut attacking = false;
+
+        if squares[index].piece.is_some() {
+            let dest_piece =
+                Piece::get_piece_from_id(pieces, squares[index].piece.unwrap()).unwrap();
+
+            attacking = dest_piece.color != piece.color;
+        }
+        return attacking;
+    }
+
+    fn is_legal(
+        pieces: &Vec<Piece>,
+        squares: &Vec<Square>,
+        piece: &Piece,
+        first: &mut bool,
+        file: i16,
+        rank: i16,
+        check_first: bool,
+    ) -> bool {
+        let mut is_legal = true;
+
+        let is_inside = Board::is_inside_board(file, rank);
+        is_legal &= is_inside;
+
+        if is_inside {
+            let index = Square::file_rank_to_index(
+                u8::try_from(file.clone()).unwrap(),
+                u8::try_from(rank.clone()).unwrap(),
+            ) as usize;
+
+            if squares[index].piece.is_some() {
+                let dest_piece =
+                    Piece::get_piece_from_id(pieces, squares[index].piece.unwrap()).unwrap();
+                if dest_piece.color == piece.color {
+                    is_legal &= false;
+                } else {
+                    if check_first {
+                        if *first {
+                            is_legal &= true;
+                            *first = false;
+                        } else {
+                            is_legal &= false;
+                        }
+                    }
+                }
+            }
+        }
+
+        is_legal
     }
 }

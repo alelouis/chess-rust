@@ -41,6 +41,15 @@ impl Chess {
 
     pub fn render(&mut self, args: &RenderArgs) {
         self.render_board(args);
+
+        if self.active_piece.is_some() {
+            let (file, rank) = Square::index_to_file_rank(self.last_index_clicked.unwrap() as u8);
+            let piece = Piece::get_piece_from_id(&self.pieces, self.active_piece.unwrap()).unwrap();
+            let legal_moves = self
+                .board
+                .generate_legal_moves(&self.pieces, &piece, file, rank);
+            self.render_legal_moves(legal_moves, args);
+        }
         self.render_pieces(args);
     }
 
@@ -175,20 +184,46 @@ impl Chess {
         });
     }
 
+    pub fn render_legal_moves(&mut self, legal_moves: Vec<(i16, i16)>, args: &RenderArgs) {
+        self.gl.draw(args.viewport(), |c, gl| {
+            for (file, rank) in legal_moves.iter() {
+                let (x, y) = Square::file_rank_to_xy(
+                    u8::try_from(file.clone()).unwrap(),
+                    u8::try_from(rank.clone()).unwrap(),
+                    self.square_size,
+                    self.window_size as f32,
+                );
+                let transform = c.transform.trans(
+                    (x - self.square_size / 2.0).into(),
+                    (y - self.square_size / 2.0).into(),
+                );
+                rectangle(
+                    [255.0 / 255.0, 0.0 / 255.0, 0.0 / 255.0, 0.5],
+                    rectangle::square(0.0, 0.0, self.square_size.into()),
+                    transform,
+                    gl,
+                );
+            }
+        });
+    }
+
     pub fn update(&mut self, args: &UpdateArgs) {
         if self.click {
             let index_clicked =
                 Square::xy_to_index(self.x, self.y, self.square_size, self.window_size as f32)
                     as usize;
+
             if let Some(id_clicked) = self.board.squares[index_clicked].piece {
                 self.last_index_clicked = Some(index_clicked);
                 self.active_piece = Some(id_clicked);
 
+                /// Graphics
                 let mut active_piece_sprite_id = None;
                 let mut piece_scale = self
                     .config
                     .get("render.piece_scale")
                     .expect("Couldn't find piece_scale in config.");
+
                 piece_scale = (piece_scale as f32 * self.global_scale) as f64;
                 for p in self.pieces.iter() {
                     if p.id == self.active_piece.unwrap() {
@@ -216,6 +251,7 @@ impl Chess {
                 let index_released =
                     Square::xy_to_index(self.x, self.y, self.square_size, self.window_size as f32)
                         as usize;
+
                 if self.board.squares[index_released].piece.is_none() {
                     self.board.squares[index_released].piece = self.active_piece;
                     self.board.squares[self.last_index_clicked.unwrap()].piece = None;
