@@ -191,12 +191,12 @@ impl Chess {
         });
     }
 
-    pub fn render_legal_moves(&mut self, legal_moves: Vec<(i16, i16)>, args: &RenderArgs) {
+    pub fn render_legal_moves(&mut self, legal_moves: Vec<(u8, u8)>, args: &RenderArgs) {
         self.gl.draw(args.viewport(), |c, gl| {
             for (file, rank) in legal_moves.iter() {
                 let (x, y) = Square::file_rank_to_xy(
-                    u8::try_from(file.clone()).unwrap(),
-                    u8::try_from(rank.clone()).unwrap(),
+                    file.clone(),
+                    rank.clone(),
                     self.square_size,
                     self.window_size as f32,
                 );

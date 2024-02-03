@@ -117,7 +117,7 @@ impl Board {
         piece: &Piece,
         file: u8,
         rank: u8,
-    ) -> Vec<(i16, i16)> {
+    ) -> Vec<(u8, u8)> {
         let mut legal_moves: Vec<(i16, i16)> = vec![];
         match piece.kind {
             Kind::Pawn => {
@@ -172,6 +172,14 @@ impl Board {
             }
         }
         legal_moves
+            .iter()
+            .map(|(file, rank)| {
+                (
+                    u8::try_from(file.clone()).unwrap(),
+                    u8::try_from(rank.clone()).unwrap(),
+                )
+            })
+            .collect()
     }
 
     pub fn generate_pawn(
@@ -383,15 +391,10 @@ impl Board {
         let (file, rank) = Square::index_to_file_rank(from_index as u8);
         let piece = Piece::get_piece_from_id(pieces, active_piece_id.expect("No active piece id."))
             .expect("No piece.");
-        let legal_moves = self.generate_legal_moves(pieces, &piece, file, rank);
-        let legal_moves_indices: Vec<u8> = legal_moves
+        let legal_moves_indices: Vec<u8> = self
+            .generate_legal_moves(pieces, &piece, file, rank)
             .iter()
-            .map(|(file, rank)| {
-                Square::file_rank_to_index(
-                    u8::try_from(file.clone()).unwrap(),
-                    u8::try_from(rank.clone()).unwrap(),
-                )
-            })
+            .map(|(file, rank)| Square::file_rank_to_index(file.clone(), rank.clone()))
             .collect();
 
         return if !legal_moves_indices.contains(&(to_index as u8)) {
@@ -404,19 +407,10 @@ impl Board {
             let target_piece_id = self.squares[to_index]
                 .piece_id
                 .expect("No target piece id.");
-            let picked_piece =
-                Piece::get_piece_from_id(pieces, active_piece_id.expect("No active piece id."))
-                    .expect("No picked piece.");
-            let target_piece =
-                Piece::get_piece_from_id(pieces, target_piece_id).expect("No target piece.");
 
-            if picked_piece.color != target_piece.color {
-                self.squares[to_index].piece_id = active_piece_id;
-                self.squares[from_index].piece_id = None;
-                Ok(MoveType::Take(target_piece_id))
-            } else {
-                Err(MoveType::OccupiedBySameColor)
-            }
+            self.squares[to_index].piece_id = active_piece_id;
+            self.squares[from_index].piece_id = None;
+            Ok(MoveType::Take(target_piece_id))
         };
     }
 }
