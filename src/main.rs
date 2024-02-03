@@ -1,6 +1,7 @@
 mod board;
 mod chess;
 mod fonts;
+mod moves;
 mod piece;
 
 extern crate find_folder;

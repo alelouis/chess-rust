@@ -1,5 +1,6 @@
 use crate::board::{Board, Square, FILE, RANK};
 use crate::fonts;
+use crate::moves::MoveType;
 use crate::piece::Piece;
 use ai_behavior::{Action, Sequence};
 use config::Config;
@@ -59,8 +60,15 @@ impl Chess {
             .get("render.font_scale")
             .expect("Couldn't find font_scale in config.");
         font_scale = (font_scale as f32 * self.global_scale) as f64;
+
         self.gl.draw(args.viewport(), |c, gl| {
+            let mut glyphs;
+            let mut glyph_offset;
+
+            // Reset screen
             clear([0.0, 1.0, 0.0, 1.0], gl);
+
+            // Draw board squares
             for s in self.board.squares.iter() {
                 let (rank, file) = s.file_rank();
                 let (x, y) =
@@ -75,8 +83,7 @@ impl Chess {
                     transform,
                     gl,
                 );
-                let mut glyphs = vec![];
-                let mut glyph_offset = (0.0, 0.0);
+
                 if file == 0 {
                     glyphs = fonts::glyphs(&mut self.face, format!("{} ", RANK[rank as usize]));
                     glyph_offset = (-self.square_size * 0.45, -self.square_size * 0.20);
@@ -122,7 +129,7 @@ impl Chess {
                 child.set_position(self.x.into(), self.y.into());
             } else {
                 for square in self.board.squares.iter() {
-                    if let Some(piece_id) = square.piece {
+                    if let Some(piece_id) = square.piece_id {
                         let mut active_piece_sprite_id = None;
                         for p in self.pieces.iter() {
                             if p.id == piece_id {
@@ -213,11 +220,14 @@ impl Chess {
                 Square::xy_to_index(self.x, self.y, self.square_size, self.window_size as f32)
                     as usize;
 
-            if let Some(id_clicked) = self.board.squares[index_clicked].piece {
+            if let Some(id_clicked) = self.board.squares[index_clicked].piece_id {
+                // Where the piece was picked
                 self.last_index_clicked = Some(index_clicked);
+
+                // Which piece
                 self.active_piece = Some(id_clicked);
 
-                /// Graphics
+                // Graphics, animation
                 let mut active_piece_sprite_id = None;
                 let mut piece_scale = self
                     .config
@@ -252,34 +262,21 @@ impl Chess {
                     Square::xy_to_index(self.x, self.y, self.square_size, self.window_size as f32)
                         as usize;
 
-                if self.board.squares[index_released].piece.is_none() {
-                    self.board.squares[index_released].piece = self.active_piece;
-                    self.board.squares[self.last_index_clicked.unwrap()].piece = None;
-                } else {
-                    let under_piece_color = Piece::find_color_for_id(
-                        &self.pieces,
-                        self.board.squares[index_released].piece.unwrap(),
-                    )
-                    .unwrap();
+                let last_index = self
+                    .last_index_clicked
+                    .expect("Couldn't read last index clicked.");
 
-                    let active_piece_color =
-                        Piece::find_color_for_id(&self.pieces, self.active_piece.unwrap()).unwrap();
-                    if under_piece_color != active_piece_color {
-                        let sprite_id = Piece::find_sprite_id_for_id(
-                            &self.pieces,
-                            self.board.squares[index_released].piece.unwrap(),
-                        );
-
-                        self.scene.remove_child(sprite_id.unwrap());
-
-                        Piece::remove_id_from_pieces(
-                            &mut self.pieces,
-                            self.board.squares[index_released].piece.unwrap(),
-                        );
-
-                        self.board.squares[index_released].piece = self.active_piece;
-                        self.board.squares[self.last_index_clicked.unwrap()].piece = None;
-                    }
+                let move_result = self.board.move_piece(
+                    self.active_piece,
+                    &mut self.pieces,
+                    last_index,
+                    index_released,
+                );
+                println!("{:?}", move_result);
+                if let Ok(MoveType::Take(piece_id)) = move_result {
+                    let sprite_id = Piece::find_sprite_id_for_id(&self.pieces, piece_id);
+                    self.scene.remove_child(sprite_id.unwrap());
+                    Piece::remove_id_from_pieces(&mut self.pieces, piece_id);
                 }
             }
 

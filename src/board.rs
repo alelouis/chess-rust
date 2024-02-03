@@ -1,5 +1,7 @@
+use crate::moves::MoveType;
 use crate::piece::{Color, Kind, Piece};
 use opengl_graphics::Texture;
+use piston::Touch::Move;
 use sprite::Scene;
 
 const BLACK: [f32; 4] = [81.0 / 255.0, 79.0 / 255.0, 174.0 / 255.0, 1.0];
@@ -11,7 +13,7 @@ pub const FILE: [&str; 8] = ["a", "b", "c", "d", "e", "f", "g", "h"];
 pub struct Square {
     pub color: [f32; 4],
     pub index: u8,
-    pub piece: Option<u8>,
+    pub piece_id: Option<u8>,
 }
 
 pub struct Board {
@@ -24,7 +26,7 @@ impl Square {
         Square {
             color,
             index,
-            piece: None,
+            piece_id: None,
         }
     }
 
@@ -101,7 +103,7 @@ impl Board {
                             panic!("Unknown letter found in FEN string: {c}")
                         }
                     });
-                    self.squares[index as usize].piece = Some(pieces.last().unwrap().id);
+                    self.squares[index as usize].piece_id = Some(pieces.last().unwrap().id);
                     index += 1;
                 }
             }
@@ -196,6 +198,7 @@ impl Board {
                 Board::is_attacking(&pieces, &self.squares, piece, f.clone(), r.clone())
             })
             .collect();
+
         legal_moves.append(&mut attack_moves.clone());
 
         let mut moves = vec![];
@@ -215,7 +218,6 @@ impl Board {
             .filter(|(f, r)| !Board::is_allied(&pieces, &self.squares, piece, f.clone(), r.clone()))
             .collect();
         legal_moves.append(&mut normal_moves);
-
         legal_moves
     }
 
@@ -295,9 +297,9 @@ impl Board {
             u8::try_from(rank.clone()).unwrap(),
         ) as usize;
 
-        if squares[index].piece.is_some() {
+        if squares[index].piece_id.is_some() {
             let dest_piece =
-                Piece::get_piece_from_id(pieces, squares[index].piece.unwrap()).unwrap();
+                Piece::get_piece_from_id(pieces, squares[index].piece_id.unwrap()).unwrap();
             if dest_piece.color == piece.color {
                 allied = true;
             } else {
@@ -321,9 +323,9 @@ impl Board {
 
         let mut attacking = false;
 
-        if squares[index].piece.is_some() {
+        if squares[index].piece_id.is_some() {
             let dest_piece =
-                Piece::get_piece_from_id(pieces, squares[index].piece.unwrap()).unwrap();
+                Piece::get_piece_from_id(pieces, squares[index].piece_id.unwrap()).unwrap();
 
             attacking = dest_piece.color != piece.color;
         }
@@ -350,9 +352,9 @@ impl Board {
                 u8::try_from(rank.clone()).unwrap(),
             ) as usize;
 
-            if squares[index].piece.is_some() {
+            if squares[index].piece_id.is_some() {
                 let dest_piece =
-                    Piece::get_piece_from_id(pieces, squares[index].piece.unwrap()).unwrap();
+                    Piece::get_piece_from_id(pieces, squares[index].piece_id.unwrap()).unwrap();
                 if dest_piece.color == piece.color {
                     is_legal &= false;
                 } else {
@@ -369,5 +371,52 @@ impl Board {
         }
 
         is_legal
+    }
+
+    pub fn move_piece(
+        self: &mut Self,
+        active_piece_id: Option<u8>,
+        pieces: &mut Vec<Piece>,
+        from_index: usize,
+        to_index: usize,
+    ) -> Result<MoveType, MoveType> {
+        let (file, rank) = Square::index_to_file_rank(from_index as u8);
+        let piece = Piece::get_piece_from_id(pieces, active_piece_id.expect("No active piece id."))
+            .expect("No piece.");
+        let legal_moves = self.generate_legal_moves(pieces, &piece, file, rank);
+        let legal_moves_indices: Vec<u8> = legal_moves
+            .iter()
+            .map(|(file, rank)| {
+                Square::file_rank_to_index(
+                    u8::try_from(file.clone()).unwrap(),
+                    u8::try_from(rank.clone()).unwrap(),
+                )
+            })
+            .collect();
+
+        return if !legal_moves_indices.contains(&(to_index as u8)) {
+            Err(MoveType::Illegal)
+        } else if self.squares[to_index].piece_id.is_none() {
+            self.squares[to_index].piece_id = active_piece_id;
+            self.squares[from_index].piece_id = None;
+            Ok(MoveType::Empty)
+        } else {
+            let target_piece_id = self.squares[to_index]
+                .piece_id
+                .expect("No target piece id.");
+            let picked_piece =
+                Piece::get_piece_from_id(pieces, active_piece_id.expect("No active piece id."))
+                    .expect("No picked piece.");
+            let target_piece =
+                Piece::get_piece_from_id(pieces, target_piece_id).expect("No target piece.");
+
+            if picked_piece.color != target_piece.color {
+                self.squares[to_index].piece_id = active_piece_id;
+                self.squares[from_index].piece_id = None;
+                Ok(MoveType::Take(target_piece_id))
+            } else {
+                Err(MoveType::OccupiedBySameColor)
+            }
+        };
     }
 }

@@ -1,6 +1,5 @@
 use crate::piece::Color::{Black, White};
 use opengl_graphics::{Texture, TextureSettings};
-use piston_window::*;
 use sprite::*;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -48,7 +47,7 @@ fn get_set() -> HashMap<(Kind, Color), String> {
 
 impl Piece {
     pub fn new(kind: Kind, color: Color, scene: &mut Scene<Texture>, id: u8) -> Piece {
-        let set = get_set();
+        let set: HashMap<(Kind, Color), String> = get_set();
         let assets = find_folder::Search::ParentsThenKids(1, 1)
             .for_folder("assets")
             .unwrap();
@@ -62,7 +61,7 @@ impl Piece {
         );
         let mut sprite = Sprite::from_texture(tex);
         sprite.set_scale(0.0, 0.0);
-        let sprite_id = scene.add_child(sprite);
+        let sprite_id: Uuid = scene.add_child(sprite);
 
         Piece {
             kind,
@@ -73,7 +72,7 @@ impl Piece {
     }
 
     pub fn find_color_for_id(pieces: &Vec<Piece>, id: u8) -> Option<Color> {
-        let mut color = None;
+        let mut color: Option<Color> = None;
         for piece in pieces.iter() {
             if piece.id == id {
                 color = Some(piece.color)
